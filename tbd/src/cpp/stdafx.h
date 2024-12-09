@@ -134,6 +134,19 @@ using HashSize = uint32_t;
  * \brief Size of the index for a Cell
  */
 using CellIndex = uint8_t;
+// want to be able to make a bitmask of all directions it came from
+//  064  008  032
+//  001  000  002
+//  016  004  128
+static constexpr CellIndex DIRECTION_NONE = 0b00000000;
+static constexpr CellIndex DIRECTION_W = 0b00000001;
+static constexpr CellIndex DIRECTION_E = 0b00000010;
+static constexpr CellIndex DIRECTION_S = 0b00000100;
+static constexpr CellIndex DIRECTION_N = 0b00001000;
+static constexpr CellIndex DIRECTION_SW = 0b00010000;
+static constexpr CellIndex DIRECTION_NE = 0b00100000;
+static constexpr CellIndex DIRECTION_NW = 0b01000000;
+static constexpr CellIndex DIRECTION_SE = 0b10000000;
 /**
  * \brief A row or column index for a grid
  */

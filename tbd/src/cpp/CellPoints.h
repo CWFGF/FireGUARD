@@ -15,24 +15,68 @@ using tbd::wx::Direction;
 // using sim::CellPoints;
 using topo::Cell;
 using topo::SpreadKey;
+class SpreadData : std::tuple<DurationSize, IntensitySize, ROSSize, Direction>
+{
+public:
+  using std::tuple<DurationSize, IntensitySize, ROSSize, Direction>::tuple;
+  DurationSize time() const
+  {
+    return std::get<0>(*this);
+  }
+  IntensitySize intensity() const
+  {
+    return std::get<1>(*this);
+  }
+  ROSSize ros() const
+  {
+    return std::get<2>(*this);
+  }
+  Direction direction() const
+  {
+    return std::get<3>(*this);
+  }
+};
 
-// static constexpr size_t FURTHEST_N = 0;
-// static constexpr size_t FURTHEST_NNE = 1;
-// static constexpr size_t FURTHEST_NE = 2;
-// static constexpr size_t FURTHEST_ENE = 3;
-// static constexpr size_t FURTHEST_E = 4;
-// static constexpr size_t FURTHEST_ESE = 5;
-// static constexpr size_t FURTHEST_SE = 6;
-// static constexpr size_t FURTHEST_SSE = 7;
-// static constexpr size_t FURTHEST_S = 8;
-// static constexpr size_t FURTHEST_SSW = 9;
-// static constexpr size_t FURTHEST_SW = 10;
-// static constexpr size_t FURTHEST_WSW = 11;
-// static constexpr size_t FURTHEST_W = 12;
-// static constexpr size_t FURTHEST_WNW = 13;
-// static constexpr size_t FURTHEST_NW = 14;
-// static constexpr size_t FURTHEST_NNW = 15;
+static constexpr size_t FURTHEST_N = 0;
+static constexpr size_t FURTHEST_NNE = 1;
+static constexpr size_t FURTHEST_NE = 2;
+static constexpr size_t FURTHEST_ENE = 3;
+static constexpr size_t FURTHEST_E = 4;
+static constexpr size_t FURTHEST_ESE = 5;
+static constexpr size_t FURTHEST_SE = 6;
+static constexpr size_t FURTHEST_SSE = 7;
+static constexpr size_t FURTHEST_S = 8;
+static constexpr size_t FURTHEST_SSW = 9;
+static constexpr size_t FURTHEST_SW = 10;
+static constexpr size_t FURTHEST_WSW = 11;
+static constexpr size_t FURTHEST_W = 12;
+static constexpr size_t FURTHEST_WNW = 13;
+static constexpr size_t FURTHEST_NW = 14;
+static constexpr size_t FURTHEST_NNW = 15;
 static constexpr size_t NUM_DIRECTIONS = 16;
+
+static constexpr auto MASK_NE = DIRECTION_N & DIRECTION_NE & DIRECTION_E;
+static constexpr auto MASK_SE = DIRECTION_S & DIRECTION_SE & DIRECTION_E;
+static constexpr auto MASK_SW = DIRECTION_S & DIRECTION_SW & DIRECTION_W;
+static constexpr auto MASK_NW = DIRECTION_N & DIRECTION_NW & DIRECTION_W;
+// mask of sides that would need to be burned for direction to not matter
+static constexpr std::array<CellIndex, NUM_DIRECTIONS> DIRECTION_MASKS{
+  DIRECTION_N,
+  MASK_NE,
+  MASK_NE,
+  MASK_NE,
+  DIRECTION_E,
+  MASK_SE,
+  MASK_SE,
+  MASK_SE,
+  DIRECTION_S,
+  MASK_SW,
+  MASK_SW,
+  MASK_SW,
+  DIRECTION_W,
+  MASK_NW,
+  MASK_NW,
+  MASK_NW};
 
 class CellPointsMap;
 /**
@@ -55,10 +99,8 @@ public:
   CellPoints(const CellPoints* rhs) noexcept;
   //   CellPoints(const vector<InnerPos>& pts) noexcept;
   CellPoints(
-    const DurationSize& arrival_time,
-    const IntensitySize intensity,
-    const ROSSize& ros,
-    const Direction& raz,
+    const XYPos& src,
+    const SpreadData& spread_current,
     const XYSize x,
     const XYSize y) noexcept;
   CellPoints(CellPoints&& rhs) noexcept = default;
@@ -66,10 +108,8 @@ public:
   CellPoints& operator=(CellPoints&& rhs) noexcept = default;
   CellPoints& operator=(const CellPoints& rhs) noexcept = default;
   CellPoints& insert(
-    const DurationSize& arrival_time,
-    const IntensitySize intensity,
-    const ROSSize& ros,
-    const Direction& raz,
+    const XYPos& src,
+    const SpreadData& spread_current,
     const XYSize x,
     const XYSize y) noexcept;
   CellPoints& insert(const InnerPos& p) noexcept;
@@ -82,7 +122,7 @@ public:
   //       auto it = begin;
   //       while (end != it)
   //       {
-  //         insert(*it);
+  //          (*it);
   //         ++it;
   //       }
   //     }
@@ -104,10 +144,13 @@ public:
   void clear();
   //   const array_pts points() const;
   bool empty() const;
-  DurationSize arrival_time_;
-  IntensitySize intensity_at_arrival_;
-  ROSSize ros_at_arrival_;
-  Direction raz_at_arrival_;
+  SpreadData spread_arrival_;
+  SpreadData spread_internal_;
+  SpreadData spread_exit_;
+  // DurationSize arrival_time_;
+  // IntensitySize intensity_at_arrival_;
+  // ROSSize ros_at_arrival_;
+  // Direction raz_at_arrival_;
   // friend CellPointsMap;
   // FIX: just access directly for now
 public:
@@ -127,19 +170,16 @@ class CellPointsMap
 {
 public:
   CellPointsMap();
+  // CellPoints& insert(
+  //   const DurationSize& arrival_time,
+  //   const IntensitySize intensity,
+  //   const ROSSize& ros,
+  //   const Direction& raz,
+  //   const XYSize x,
+  //   const XYSize y) noexcept;
   CellPoints& insert(
-    const DurationSize& arrival_time,
-    const IntensitySize intensity,
-    const ROSSize& ros,
-    const Direction& raz,
-    const XYSize x,
-    const XYSize y) noexcept;
-  CellPoints& insert(
-    const Location& src,
-    const DurationSize& arrival_time,
-    const IntensitySize intensity,
-    const ROSSize& ros,
-    const Direction& raz,
+    const XYPos& src,
+    const SpreadData& spread_current,
     const XYSize x,
     const XYSize y) noexcept;
   CellPointsMap& merge(

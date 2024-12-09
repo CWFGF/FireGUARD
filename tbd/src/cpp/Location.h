@@ -210,19 +210,6 @@ inline bool operator>=(const Position<V>& lhs, const Position<V>& rhs)
   return !(lhs < rhs);
 }
 
-// want to be able to make a bitmask of all directions it came from
-//  064  008  032
-//  001  000  002
-//  016  004  128
-static constexpr CellIndex DIRECTION_NONE = 0b00000000;
-static constexpr CellIndex DIRECTION_W = 0b00000001;
-static constexpr CellIndex DIRECTION_E = 0b00000010;
-static constexpr CellIndex DIRECTION_S = 0b00000100;
-static constexpr CellIndex DIRECTION_N = 0b00001000;
-static constexpr CellIndex DIRECTION_SW = 0b00010000;
-static constexpr CellIndex DIRECTION_NE = 0b00100000;
-static constexpr CellIndex DIRECTION_NW = 0b01000000;
-static constexpr CellIndex DIRECTION_SE = 0b10000000;
 #ifdef DEBUG_DIRECTIONS
 // FIX: seems like there must be something with enum type that would be better?
 static const map<CellIndex, const char*> DIRECTION_NAMES{
