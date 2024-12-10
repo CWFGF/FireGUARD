@@ -83,12 +83,8 @@ if (WIN32)
     target_include_directories(${PROJECT_NAME} PRIVATE ${GEOTIFF_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} PRIVATE ${GEOTIFF_LIBRARIES})
 else()
-    # ./usr/lib/x86_64-linux-gnu/cmake/TBB/TBBConfig.cmake
-
-    # list(APPEND CMAKE_MODULE_PATH "deps/tbb/cmake/")
     list(APPEND CMAKE_MODULE_PATH "/usr/lib/x86_64-linux-gnu/cmake")
 
-    find_package(TBB REQUIRED)
     # not seeing GeoTIFF.cmake on linux for some reason
     # HACK: ubuntu hides headers in /usr/include/geotiff but other distros don't
     if(EXISTS "/usr/include/geotiff")
@@ -96,13 +92,8 @@ else()
     endif()
 
     find_package(PROJ REQUIRED CONFIG)
-    target_link_libraries(${PROJECT_NAME} PUBLIC geotiff tiff TBB::tbb PROJ::proj)
+    target_link_libraries(${PROJECT_NAME} PUBLIC geotiff tiff PROJ::proj)
 endif()
-
-# find_package(TBB REQUIRED)
-# # target_link_libraries(${PROJECT_NAME} PUBLIC geotiff tiff Threads::Threads TBB:tbb)
-# target_link_libraries(${PROJECT_NAME} PUBLIC geotiff tiff Threads::Threads tbb)
-# # target_link_libraries(${PROJECT_NAME} PUBLIC pthread tbb geotiff tiff)
 
 add_custom_command(TARGET ${PROJECT_NAME}
                    POST_BUILD

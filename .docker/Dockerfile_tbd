@@ -9,7 +9,7 @@ RUN apt-get update --fix-missing
 FROM gcc-updated AS gcc-cmake-with_libs
 RUN apt-get install -y \
   cron curl nano procps psmisc tar util-linux unzip wget zip \
-  libtbb-dev libgdal-dev gdal-bin \
+  libgdal-dev gdal-bin \
   libtiff-dev libgeotiff-dev cmake \
   && export CPLUS_INCLUDE_PATH=/usr/include/gdal \
   && export C_INCLUDE_PATH=/usr/include/gdal
@@ -83,7 +83,7 @@ FROM debian:trixie-slim AS minimal-with-user
 ARG USERNAME
 ARG USER_ID
 RUN apt-get update --fix-missing \
-  && apt-get install -y sudo libgeotiff5 libtbb12
+  && apt-get install -y sudo libgeotiff5
 RUN groupadd --gid ${USER_ID} ${USERNAME} \
   && useradd --uid ${USER_ID} --gid ${USER_ID} -m ${USERNAME} \
   && chsh --shell /bin/bash ${USERNAME} \
