@@ -261,8 +261,8 @@ protected:
    * \param fmc Foliar Moisture Content
    * \return Crown fire spread rate (RSC) (m/min) [ST-X-3 eq 64]
    */
-  [[nodiscard]] static constexpr MathSize foliarMoistureEffect(const MathSize isi,
-                                                               const MathSize fmc) noexcept
+  [[nodiscard]] static constexpr MathSize crownRateOfSpread(const MathSize isi,
+                                                            const MathSize fmc) noexcept
   {
     return STANDARD_FOLIAR_MOISTURE_ISI(isi) * STANDARD_FOLIAR_MOISTURE_FMC(fmc);
   }

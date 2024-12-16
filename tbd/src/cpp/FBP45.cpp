@@ -44,7 +44,9 @@ MathSize FuelC6::finalRos(const SpreadInfo& spread,
                           const MathSize cfb,
                           const MathSize rss) const noexcept
 {
-  return rss + cfb * (foliarMoistureEffect(isi, spread.foliarMoisture()) - rss);
+  const auto rsc = crownRateOfSpread(isi, spread.foliarMoisture());
+  // using max with 0 is the same as ensuring rsc > rss
+  return rss + cfb * max(0.0, rsc - rss);
 }
 /**
  * \brief Forest Floor Consumption (FFC) (kg/m^2) [ST-X-3 eq 13]
