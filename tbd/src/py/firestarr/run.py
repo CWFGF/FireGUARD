@@ -937,4 +937,8 @@ def make_resume(
     kwargs["dir"] = dir_resume
     kwargs["do_publish"] = do_publish
     kwargs["do_merge"] = do_merge
-    return Run(*args, **kwargs)
+    try:
+        return Run(*args, **kwargs)
+    except RuntimeError as ex:
+        logging.error(ex)
+        return None
