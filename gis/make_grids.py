@@ -1,46 +1,44 @@
 from __future__ import print_function
+
 import gc
-
-# import shapefile
-from osgeo import gdal, ogr, osr
-import rasterio
-from rasterio.merge import merge
-from rasterio.plot import show
-from rasterio.plot import show_hist
-from rasterio.mask import mask
-from shapely.geometry import box
-import geopandas as gpd
-from fiona.crs import from_epsg
-import pycrs
-import os
-import fiona
-import rasterio.mask
-import rasterio.rio
-from pyproj import Proj
-import numpy as np
+import logging
 import math
-import pandas as pd
-import osgeo
+import os
 import subprocess
-
 import sys
 
 import common
-import logging
+import fiona
+import geopandas as gpd
+import numpy as np
+import osgeo
+import pandas as pd
+import pycrs
+import rasterio
+import rasterio.mask
+import rasterio.rio
+from fiona.crs import from_epsg
+
+# import shapefile
+from osgeo import gdal, ogr, osr
+from pyproj import Proj
+from rasterio.mask import mask
+from rasterio.merge import merge
+from rasterio.plot import show, show_hist
+from shapely.geometry import box
 
 logging.getLogger().setLevel(logging.INFO)
 
 ##########################
 # https://stackoverflow.com/questions/3662361/fill-in-missing-values-with-nearest-neighbour-in-python-numpy-masked-arrays
 
-from scipy import ndimage as nd
-
 import sys
+
+from scipy import ndimage as nd
 
 SCRIPTS_DIR = os.path.join(os.path.dirname(sys.executable))
 sys.path.append(SCRIPTS_DIR)
 import osgeo_utils.gdal_merge as gm
-
 
 
 def fill(data, invalid=None):
@@ -80,7 +78,7 @@ INTERMEDIATE_DIR = os.path.join(DATA_DIR, "intermediate")
 # put in the folder structure so that firestarr can reference grid/100m and
 # have this be the default
 DIR = os.path.join(GENERATED_DIR, "grid", f"{CELL_SIZE}m", "default")
-TMP = os.path.realpath("/appl/data/tmp")
+TMP = os.path.realpath(os.environ.get("TMPDIR"))
 CREATION_OPTIONS = [
     "TILED=YES",
     "BLOCKXSIZE=256",
@@ -667,8 +665,8 @@ def make_zone(zone):
     gc.collect()
 
 
-from multiprocessing import Pool
 import multiprocessing
+from multiprocessing import Pool
 
 if __name__ == "__main__":
     if not os.path.exists(INT_FUEL):

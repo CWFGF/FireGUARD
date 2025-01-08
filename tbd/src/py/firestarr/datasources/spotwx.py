@@ -17,9 +17,10 @@ from common import (
     remove_timezone_utc,
 )
 from datasources.datatypes import SourceModel
-from gis import gdf_from_file, save_geojson, to_gdf
 from net import try_save_http
 from pyrate_limiter import Duration, FileLockSQLiteBucket, Limiter, RequestRate
+
+from gis import gdf_from_file, save_geojson, to_gdf
 
 DIR_SPOTWX = ensure_dir(os.path.join(DIR_DOWNLOAD, "spotwx"))
 # GEPS model is 0.5 degree resoltion, so two digits is too much
@@ -43,10 +44,12 @@ def get_spotwx_limit():
 
 
 # NOTE: does not work with multiprocess unless bucket_class is set properly
+# defaults to temp directory and trying to set via bucket_kwargs doesn't seem to work
+# so set ${TMPDIR}
 limiter = Limiter(
     RequestRate(get_spotwx_limit(), Duration.MINUTE),
     bucket_class=FileLockSQLiteBucket,
-    bucket_kwargs={"path": "../data/tmp/pyrate_limiter.sqlite"},
+    # bucket_kwargs={"path": "api_limit.sqlite"},
 )
 
 
@@ -74,7 +77,8 @@ def make_spotwx_query(model, lat, lon, **kwargs):
 
 def make_spotwx_parse(need_column, fct_parse=None, expected_value=None):
     def do_parse(_):
-        df = read_csv_safe(_, encoding="utf-8")
+        # df = read_csv_safe(_, encoding="utf-8")
+        df = read_csv_safe(_)
         # df.columns = [x.lower for x in df.columns]
         valid = need_column in df.columns
         if valid:

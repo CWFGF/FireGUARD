@@ -1,8 +1,7 @@
 #!/bin/bash
 DIR=`dirname $(realpath "$0")`
 RUN_ID=`pwd | sed "s/.*\/\(.*\)/\1/g"`
-DIR_TMP=/tmp
-PREFIX="${DIR_TMP}/${RUN_ID}"
+PREFIX="${TMPDIR}/${RUN_ID}"
 FILE_GROUPS="${PREFIX}_files.txt"
 FILE_TIMES="${PREFIX}_times.txt"
 FILE_SIMS="${PREFIX}_sims.txt"

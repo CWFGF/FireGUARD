@@ -1,74 +1,27 @@
-ARG GCC_VERSION
-
-
-# So we can start from an updated image at various steps
-FROM gcc:${GCC_VERSION:-13.3} AS gcc-updated
-RUN apt-get update --fix-missing
-
-
-FROM gcc-updated AS gcc-cmake-with_libs
-RUN apt-get install -y \
-  cron curl nano procps psmisc tar util-linux unzip wget zip \
-  libgdal-dev gdal-bin \
-  libtiff-dev libgeotiff-dev cmake \
-  && export CPLUS_INCLUDE_PATH=/usr/include/gdal \
-  && export C_INCLUDE_PATH=/usr/include/gdal
-
-
-FROM gcc-cmake-with_libs AS gcc-cmake-python
-WORKDIR /appl/
-RUN apt-get install -y python3-pip libpython3-dev python3-venv sudo \
-  && update-alternatives --install /usr/bin/python python /usr/bin/python3 10 \
-  && python -m venv /appl/.venv \
-  && . /appl/.venv/bin/activate \
-  && python -m pip install ipython numpy \
-  && python -m pip install --global-option=build_ext gdal==`ogrinfo --version | sed "s/GDAL \(.*\),.*/\1/"`
-
-
-FROM gcc-cmake-python AS tbd_dev
+FROM debian:trixie-slim AS minimal-with-user
 ARG USERNAME
-ARG VERSION
+ARG USER_ID
+RUN apt-get update --fix-missing
 RUN apt-get install -y locales \
   && sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
   && locale-gen
-RUN apt-get install -y gdb valgrind time nano bc ministat \
-  libdwarf-dev libelf-dev libdw-dev linux-perf clang-format \
-  p7zip-full rsync
-ARG USER_ID
-RUN groupadd --gid ${USER_ID} ${USERNAME} \
+RUN apt-get install -y sudo \
+  && groupadd --gid ${USER_ID} ${USERNAME} \
   && useradd --uid ${USER_ID} --gid ${USER_ID} -m ${USERNAME} \
   && chsh --shell /bin/bash ${USERNAME} \
   && echo ${USERNAME} ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/${USERNAME} \
   && chmod 0440 /etc/sudoers.d/${USERNAME}
-# HACK: make sure python folder doesn't break if version changes
-RUN chown -R ${USERNAME}:${USERNAME} /appl/.venv \
-  && echo /appl/tbd/src/py/firestarr > /appl/.venv/lib/`ls -1 /appl/.venv/lib/ | grep python`/site-packages/firestarr.pth \
-  && echo source /appl/.venv/bin/activate >> /home/${USERNAME}/.bashrc \
-  && echo export VERSION=${VERSION} >> /home/${USERNAME}/.bashrc \
-  && echo cd /appl/tbd >> /home/${USERNAME}/.bashrc
-WORKDIR /appl/tbd/
-COPY .docker/requirements_tbd.txt /appl/requirements_tbd.txt
-RUN . /appl/.venv/bin/activate \
-  && python -m pip install -r /appl/requirements_tbd.txt
-RUN chown -R ${USERNAME}:${USERNAME} /appl
 
+FROM minimal-with-user AS minimal-with-libs
+RUN apt-get install -y --no-install-recommends \
+  libgeotiff5
 
-FROM tbd_dev AS gis
-ARG VERSION
-ARG USERNAME
-ARG USER_ID
-WORKDIR /appl/gis/
-RUN echo cd /appl/gis >> /home/${USERNAME}/.bashrc
-USER ${USERNAME}
-ENTRYPOINT tail -f /dev/null
+# easier to reuse python than do it twice?
 
-FROM tbd_dev AS tbd_dev_svc
-ARG VERSION
-# run as root so we can redirect to where docker logs will show progress
-COPY .docker/crontab /etc/crontab
-USER ${USERNAME}
-ENTRYPOINT sudo cron -f
-
+FROM minimal-with-libs AS gcc-cmake-with_libs
+RUN apt-get install -y --no-install-recommends \
+  libtiff-dev libgeotiff-dev \
+  cmake gcc g++ make
 
 FROM gcc-cmake-with_libs AS tbd_build
 ARG VERSION
@@ -79,18 +32,7 @@ RUN echo export VERSION=${VERSION} >> /home/${USERNAME}/.bashrc \
   && cmake -S . -B /appl/tbd/build -D CMAKE_BUILD_TYPE=Release \
   && cmake --build /appl/tbd/build --config Release --target all -j $(nproc)
 
-FROM debian:trixie-slim AS minimal-with-user
-ARG USERNAME
-ARG USER_ID
-RUN apt-get update --fix-missing \
-  && apt-get install -y sudo libgeotiff5
-RUN groupadd --gid ${USER_ID} ${USERNAME} \
-  && useradd --uid ${USER_ID} --gid ${USER_ID} -m ${USERNAME} \
-  && chsh --shell /bin/bash ${USERNAME} \
-  && echo ${USERNAME} ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/${USERNAME} \
-  && chmod 0440 /etc/sudoers.d/${USERNAME}
-
-FROM minimal-with-user AS firestarr
+FROM minimal-with-libs AS firestarr-base
 ARG USERNAME
 ARG VERSION
 RUN apt-get clean \
@@ -99,44 +41,102 @@ RUN apt-get clean \
   /usr/share/man/*
 WORKDIR /appl/tbd
 RUN echo export VERSION=${VERSION} >> /home/${USERNAME}/.bashrc \
+  && echo export TMPDIR=/appl/data/tmp >> /home/${USERNAME}/.bashrc \
   && echo cd /appl/tbd >> /home/${USERNAME}/.bashrc
 COPY --from=tbd_build /appl/tbd/tbd /appl/tbd/
 COPY ./tbd/fuel.lut /appl/tbd/
 COPY ./tbd/settings.ini /appl/tbd/
 RUN chown -R ${USERNAME}:${USERNAME} /appl
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 USER ${USERNAME}
 
+FROM scratch AS firestarr
+ARG USERNAME
+COPY --from=firestarr-base / /
+USER ${USERNAME}
 
-FROM minimal-with-user AS py_gdal
+# FROM minimal-with-libs AS py_gdal
+# RUN apt-get install -y --no-install-recommends \
+#   python3-pip python3-numpy python3-gdal python3-venv \
+#   && update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+
+FROM minimal-with-libs AS py_gdal
+ARG USERNAME
+ARG USER_ID
 RUN apt-get install -y --no-install-recommends \
-  cron curl nano procps psmisc tar util-linux unzip wget zip \
-  python3-pip libgdal-dev libgeotiff5 python3-numpy python3-gdal python3-venv \
-  bc ministat sysstat rsync screen p7zip-full \
+  cron curl nano procps psmisc tar util-linux unzip wget zip p7zip-full rsync \
+  time nano bc ministat sysstat screen
+RUN apt-get install -y --no-install-recommends \
+  python3 gdal-bin python3-gdal python3-setuptools \
   && update-alternatives --install /usr/bin/python python /usr/bin/python3 10 \
-  && apt-get clean \
+  && python -c "from osgeo import gdal"
+RUN apt-get install -y --no-install-recommends \
+  python3-pip python3-venv
+WORKDIR /appl/tbd/
+# HACK: make sure python folder doesn't break if version changes
+# ensure that gdal can be imported at end
+RUN python -m venv --system-site-packages /appl/.venv \
+  && echo /appl/tbd/src/py/firestarr > /appl/.venv/lib/`ls -1 /appl/.venv/lib/ | grep python`/site-packages/firestarr.pth \
+  && . /appl/.venv/bin/activate \
+  && python -c "from osgeo import gdal"
+RUN chown -R ${USERNAME}:${USERNAME} /appl/.venv \
+  && echo export TMPDIR=/appl/data/tmp >> /home/${USERNAME}/.bashrc \
+  && echo source /appl/.venv/bin/activate >> /home/${USERNAME}/.bashrc \
+  && echo cd /appl/tbd >> /home/${USERNAME}/.bashrc
+RUN chown -R ${USERNAME}:${USERNAME} /appl
+
+FROM py_gdal AS tbd_base
+ARG USERNAME
+ARG VERSION
+ARG USER_ID
+COPY .docker/requirements_tbd.txt /appl/requirements_tbd.txt
+WORKDIR /appl/tbd/
+# HACK: make sure osgeo/gdal is available before & after installing requirements
+RUN python -c "from osgeo import gdal" \
+  && . /appl/.venv/bin/activate \
+  && python -c "from osgeo import gdal" \
+  && python -m pip install -r /appl/requirements_tbd.txt \
+  && python -c "from osgeo import gdal"
+RUN  echo export VERSION=${VERSION} >> /home/${USERNAME}/.bashrc
+RUN chown -R ${USERNAME}:${USERNAME} /appl
+
+FROM tbd_base AS tbd_dev
+ARG USERNAME
+ARG VERSION
+ARG USER_ID
+RUN apt-get install -y --no-install-recommends \
+  libtiff-dev libgeotiff-dev \
+  gdb valgrind libdwarf-dev libelf-dev libdw-dev linux-perf clang-format \
+  cmake gcc g++ make
+USER ${USERNAME}
+
+FROM tbd_dev AS tbd_dev_svc
+ARG USERNAME
+ARG VERSION
+ARG USER_ID
+# run as root so we can redirect to where docker logs will show progress
+COPY .docker/crontab /etc/crontab
+USER ${USERNAME}
+SHELL ["/bin/bash"]
+ENTRYPOINT ["sudo", "cron", "-f"]
+
+FROM tbd_dev AS gis
+ARG VERSION
+ARG USERNAME
+ARG USER_ID
+WORKDIR /appl/gis/
+RUN echo cd /appl/gis >> /home/${USERNAME}/.bashrc
+USER ${USERNAME}
+SHELL ["/bin/bash"]
+ENTRYPOINT ["tail", "-f", "/dev/null"]
+
+FROM tbd_base AS tbd_prod
+ARG USERNAME
+ARG VERSION
+RUN apt-get clean \
   && rm -rf \
   /var/lib/apt/lists/* \
   /usr/share/man/*
-
-
-FROM py_gdal AS tbd_prod
-ARG USERNAME
-ARG VERSION
-RUN echo export VERSION=${VERSION} >> /home/${USERNAME}/.bashrc \
-  && echo cd /appl/tbd >> /home/${USERNAME}/.bashrc \
-  && echo /appl/tbd/src/py/firestarr > /usr/lib/python3/dist-packages//firestarr.pth
-WORKDIR /appl/
-# not using venv on prod is causing problems so just be consistent
-COPY .docker/requirements_tbd.txt /appl/requirements_tbd.txt
-RUN python -m venv /appl/.venv \
-  && . /appl/.venv/bin/activate \
-  && python -m pip install -r /appl/requirements_tbd.txt
-# HACK: make sure python folder doesn't break if version changes
-RUN chown -R ${USERNAME}:${USERNAME} /appl/.venv \
-  && echo /appl/tbd/src/py/firestarr > /appl/.venv/lib/`ls -1 /appl/.venv/lib/ | grep python`/site-packages/firestarr.pth \
-  && echo source /appl/.venv/bin/activate >> /home/${USERNAME}/.bashrc \
-  && echo export VERSION=${VERSION} >> /home/${USERNAME}/.bashrc \
-  && echo cd /appl/tbd >> /home/${USERNAME}/.bashrc
 WORKDIR /appl/tbd
 COPY --from=tbd_build /appl/tbd/tbd /appl/tbd/
 COPY ./tbd/fuel.lut /appl/tbd/
@@ -150,21 +150,21 @@ COPY ./tbd/scripts /appl/tbd/scripts/
 COPY ./tbd/src/py/firestarr /appl/tbd/src/py/firestarr/
 WORKDIR /appl/tbd/src/py/cffdrs-ng
 COPY ./tbd/src/py/cffdrs-ng/NG_FWI.py .
+COPY ./tbd/src/py/cffdrs-ng/old_cffdrs.py .
 COPY ./tbd/src/py/cffdrs-ng/util.py .
 RUN chown -R ${USERNAME}:${USERNAME} /appl
 USER ${USERNAME}
-ENTRYPOINT /bin/bash
+SHELL ["/bin/bash"]
 
-FROM tbd_prod AS tbd_prod_stable
-ARG VERSION
-COPY .docker/crontab /etc/crontab
-ENTRYPOINT sudo cron -f
-
-FROM tbd_prod AS tbd_prod_svc
-ARG VERSION
-USER root
-RUN sed -i "s/CRONJOB_RUN=.*/CRONJOB_RUN=1/g" /appl/config
-# for some reason this is only set up for user to output to log
+FROM scratch AS tbd_prod_stable
+ARG USERNAME
+COPY --from=tbd_prod / /
 COPY .docker/crontab /etc/crontab
 USER ${USERNAME}
-ENTRYPOINT sudo cron -f
+ENTRYPOINT ["sudo", "cron", "-f"]
+
+FROM tbd_prod_stable AS tbd_prod_svc
+ARG USERNAME
+RUN sed -i 's/CRONJOB_RUN=.*/CRONJOB_RUN=1/g' /appl/config
+USER ${USERNAME}
+ENTRYPOINT ["sudo", "cron", "-f"]

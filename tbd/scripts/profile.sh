@@ -1,4 +1,4 @@
-DIR_PERF=/tmp/perf
+DIR_PERF=${TMPDIR}/perf
 DIR_BUILD=./build
 FILE_PERF=${DIR_PERF}/perf.data
 FREQ=100

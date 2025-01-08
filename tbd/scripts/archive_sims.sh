@@ -5,11 +5,15 @@ KEEP_UNARCHIVED=10
 DIR_FROM_SIMS="/appl/data/sims"
 DIR_FROM_RUNS="/appl/data/runs"
 DIR_BKUP="/appl/data/sims.bkup"
-DIR_TMP="/tmp/bkup"
+DIR_TMP="${TMPDIR}/bkup"
 SUBDIR_COMMON="current"
 
 # override KEEP_UNARCHIVED if set in config
 . /appl/data/config || . /appl/config
+echo "Keeping ${KEEP_UNARCHIVED} runs unarchived"
+
+# ensure 7za exists
+7za > /dev/null || (echo "7za not found" && exit -1)
 
 function do_archive()
 {

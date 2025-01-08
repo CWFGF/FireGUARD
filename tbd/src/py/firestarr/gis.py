@@ -498,8 +498,7 @@ def gdf_to_file(df, dir, base=None):
 
         def save_gpkg(f):
             # HACK: writing gpkg to azure mount is failing a lot so move after writing
-            dir_tmp = ensure_dir(os.path.join(DIR_TMP, os.path.dirname(f)))
-            f_tmp = os.path.join(dir_tmp, os.path.basename(f))
+            f_tmp = f.replace("/", "_")
             df.to_file(f_tmp, driver="GPKG")
             shutil.move(f_tmp, f)
             return f
