@@ -47,6 +47,8 @@ def make_template_empty(template):
 def check_columns(df, template):
     key, columns = get_key_and_columns(template)
     try:
+        if df is None:
+            return make_template_empty(template)
         # sort based on columns in order from left to right
         # logging.debug("reset_index")
         df = df.reset_index()

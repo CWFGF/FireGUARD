@@ -99,6 +99,8 @@ def group_fires_by_distance(df_fires, group_distance_km=DEFAULT_GROUP_DISTANCE_K
 
 
 def name_groups(df):
+    if df is None:
+        return df
     zone_rasters = find_raster_meridians()
     zone_rasters = {k: v for k, v in zone_rasters.items() if not v.endswith("_5.tif")}
 

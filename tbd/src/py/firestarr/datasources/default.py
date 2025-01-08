@@ -118,13 +118,15 @@ def override_fires(df_fires, df_override):
         unmatched = list(set(df_override.index).difference(set(matched)))
         if unmatched:
             logging.warning(f"Ignoring unmatched fires:\n{df_override.loc[unmatched]}")
-        df_fires = df_fires.loc[:]
-        df_override = df_override.loc[:]
-        cols_missing = [x for x in df_override.columns if np.all(df_override[x].isna())]
-        if cols_missing:
-            df_override.loc[matched, cols_missing] = df_fires.loc[matched, cols_missing]
-        df_fires.loc[matched] = df_override.loc[matched]
-        df_fires.loc[matched, "datetime"] = pick_max_by_column(df_fires, df_override, "datetime", matched)
+        if 0 < len(matched):
+            # can't join if nothing matches
+            df_fires = df_fires.loc[:]
+            df_override = df_override.loc[:]
+            cols_missing = [x for x in df_override.columns if np.all(df_override[x].isna())]
+            if cols_missing:
+                df_override.loc[matched, cols_missing] = df_fires.loc[matched, cols_missing]
+            df_fires.loc[matched] = df_override.loc[matched]
+            df_fires.loc[matched, "datetime"] = pick_max_by_column(df_fires, df_override, "datetime", matched)
     return df_fires
 
 

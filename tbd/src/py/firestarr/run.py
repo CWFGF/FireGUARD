@@ -112,6 +112,8 @@ class SourceFireGroup(SourceFire):
             date_latest = np.max(df_fires_active["datetime"])
             # don't add in fires that don't match because they're out
             df_fires_groups = group_fires(df_fires_active)
+            if df_fires_groups is None:
+                return df_fires_groups
             df_fires_groups["status"] = None
             # HACK: everything assumed to be up to date as of last observed change
             df_fires_groups["datetime"] = date_latest
@@ -875,9 +877,12 @@ class Run(object):
             )
         df_final = None
         try:
+            df_list = [make_gdf_from_series(r, self._crs) for r in results.values() if r is not None]
+            if 0 == len(df_list):
+                return None, any_change
             df_final = pd.concat(
                 # [make_gdf_from_series(r, self._crs) for r in results.values()]
-                [make_gdf_from_series(r, self._crs) for r in results.values() if r is not None]
+                df_list
             )
             try:
                 # HACK: df_final's geometry is a mess but the attributes are correct
