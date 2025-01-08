@@ -43,6 +43,17 @@ from datasources.datatypes import SourceFire
 from datasources.default import SourceFireActive
 from datasources.spotwx import get_model_dir, get_model_dir_uncached
 from fires import get_fires_folder, group_fires
+from gis import (
+    CRS_COMPARISON,
+    CRS_SIMINPUT,
+    CRS_WGS84,
+    area_ha,
+    find_invalid_tiffs,
+    gdf_from_file,
+    gdf_to_file,
+    make_gdf_from_series,
+    vector_path,
+)
 from log import LOGGER_NAME, add_log_file
 from publish import merge_dirs, publish_all
 from redundancy import call_safe, get_stack
@@ -58,17 +69,6 @@ from tqdm_util import (
 )
 
 import tbd
-from gis import (
-    CRS_COMPARISON,
-    CRS_SIMINPUT,
-    CRS_WGS84,
-    area_ha,
-    find_invalid_tiffs,
-    gdf_from_file,
-    gdf_to_file,
-    make_gdf_from_series,
-    vector_path,
-)
 from tbd import (
     IS_USING_BATCH,
     assign_firestarr_batch,
