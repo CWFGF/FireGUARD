@@ -50,6 +50,8 @@ DEFAULT_M3_LAST_ACTIVE = datetime.timedelta(days=30)
 DEFAULT_M3_UNMATCHED_LAST_ACTIVE_IN_DAYS = 1
 DEFAULT_LAST_ACTIVE_SINCE_OFFSET = None
 
+CURRENT_YEAR_ONLY = False
+
 WX_MODEL = "geps"
 FILE_CURRENT = f"/appl/data/{WX_MODEL}_current"
 FILE_LATEST = f"/appl/data/{WX_MODEL}_latest"

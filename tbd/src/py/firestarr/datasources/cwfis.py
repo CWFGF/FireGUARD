@@ -9,6 +9,7 @@ import model_data
 import pandas as pd
 import tqdm_util
 from common import (
+    CURRENT_YEAR_ONLY,
     DEFAULT_LAST_ACTIVE_SINCE_OFFSET,
     FLAG_DEBUG,
     FMT_DATE_YMD,
@@ -166,7 +167,8 @@ class SourceFeatureM3(SourceFeature):
         self._last_active_since = (
             self._origin.offset(-last_active_since_offset)
             if last_active_since_offset is not None
-            else datetime.date(self._origin.today.year, 1, 1)
+            else (datetime.date(self._origin.today.year, 1, 1)
+                  if CURRENT_YEAR_ONLY else datetime.date(self._origin.today.year - 1, 1, 1))
         )
         self._source = (SourceFeatureM3Service if USE_CWFIS_SERVICE else SourceFeatureM3Download)(
             self._dir_out, self._last_active_since
@@ -238,7 +240,9 @@ class SourceFireDipService(SourceFire):
 def clean_fires(gdf, year):
     gdf["datetime"] = pd.to_datetime(gdf["datetime"], errors="coerce")
     gdf["fire_name"] = make_name_ciffc(gdf)
-    gdf = gdf.loc[gdf["datetime"].apply(lambda x: x.year) == year]
+    # only pick current year fires
+    if CURRENT_YEAR_ONLY:
+        gdf = gdf.loc[gdf["datetime"].apply(lambda x: x.year) == year]
     gdf = gdf.set_index(["fire_name"])
     dupes = [k for k, v in Counter(gdf.reset_index()["fire_name"]).items() if v > 1]
     df_dupes = gdf.loc[dupes].reset_index()
@@ -271,7 +275,8 @@ class SourceFireCiffcService(SourceFire):
         def do_parse(_):
             gdf = gdf_from_file(_)
             # HACK: ignore previous year fires
-            gdf = gdf.loc[gdf["field_situation_report_date"].apply(lambda x: x.year) == self._year]
+            if CURRENT_YEAR_ONLY:
+                gdf = gdf.loc[gdf["field_situation_report_date"].apply(lambda x: x.year) == self._year]
             gdf = gdf.rename(
                 columns={
                     "field_status_date": "datetime",
