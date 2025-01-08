@@ -80,10 +80,13 @@ def _save_http_uncached(
         headers=HEADERS,
     )
     if 200 != response.status_code or fct_is_invalid(response):
+        url_masked = mask_url(url)
+        error = f"Error saving {save_as} from {url_masked}"
+        logging.error(error)
         raise HTTPError(
-            mask_url(url),
+            url_masked,
             response.status_code,
-            f"Error saving {save_as}",
+            error,
             response.headers,
             StringIO(response.text),
         )

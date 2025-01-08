@@ -666,6 +666,7 @@ def ensure(
                     except KeyboardInterrupt as ex:
                         raise ex
                     except Exception as ex:
+                        logging.error(ex)
                         logging.error(get_stack(ex))
                         ex_current = ex
                         retries -= 1
