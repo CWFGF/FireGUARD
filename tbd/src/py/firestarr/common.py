@@ -28,7 +28,7 @@ from redundancy import call_safe, get_stack
 
 FLAG_IGNORE_PERIM_OUTPUTS = True
 FLAG_DEBUG = True
-FLAG_DEBUG_LOCKS = True
+FLAG_DEBUG_LOCKS = False
 FLAG_SAVE_PREPARED = False
 
 FMT_DATETIME = "%Y-%m-%d %H:%M:%S"
@@ -566,12 +566,14 @@ class LockTracker(object):
         # os.path.join() doesn't work if path starts with '/' ?
         file_lock = f"{DIR_LOCKS}/{path.strip('/')}.lock"
         ensure_dir(os.path.dirname(file_lock))
-        logging.debug(f"Getting lock for '{path}' as '{file_lock}'")
+        if FLAG_DEBUG_LOCKS:
+            logging.debug(f"Getting lock for '{path}' as '{file_lock}'")
         self._lock_files.add(file_lock)
         return FileLock(file_lock, DEFAULT_LOCK_TIMEOUT, thread_local=False)
 
     def __del__(self) -> None:
-        print(f"Removing locks on exit:\n\t{self._lock_files}")
+        if FLAG_DEBUG_LOCKS:
+            print(f"Removing locks on exit:\n\t{self._lock_files}")
         try_remove(list(self._lock_files))
 
 
