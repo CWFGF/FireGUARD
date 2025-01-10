@@ -132,7 +132,8 @@ def run_main(args):
             )
     run_attempts += 1
     # returns true if just finished current run
-    is_outdated = run_current.run_until_successful_or_outdated(no_retry=no_retry)
+    is_current = run_current.run_until_successful_or_outdated(no_retry=no_retry)
+    is_outdated = not is_current
     if prepare_only:
         do_retry = False
         return True
@@ -143,7 +144,8 @@ def run_main(args):
         f"Run {run_current._name}:\n\t"
         f"is_outdated = {is_outdated}, is_published = {is_published}, should_rerun = {should_rerun}, no_retry == {no_retry}"
     )
-    return no_retry or should_rerun
+    # whether things should stop running
+    return no_retry or (not should_rerun)
 
 
 if __name__ == "__main__":
