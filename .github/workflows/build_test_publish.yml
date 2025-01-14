@@ -1,4 +1,5 @@
 # Make Docker images
+# FIX: reuse build/test workflow
 
 name: Create Docker images, test main binary, and publish
 
@@ -44,7 +45,7 @@ jobs:
 
       - name: Test FireSTARR
         run: |
-          docker compose run firestarr /appl/tbd/tbd test dir_test --hours 12
+          docker compose run firestarr /appl/tbd/tbd test /appl/tbd/dir_test --hours 5
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
