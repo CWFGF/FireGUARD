@@ -1,11 +1,11 @@
 FROM debian:trixie-slim AS minimal-with-user
 ARG USERNAME
 ARG USER_ID
-RUN apt-get update --fix-missing
-RUN apt-get install -y locales \
+RUN apt-get update --fix-missing \
+  && apt-get install -y locales \
   && sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
-  && locale-gen
-RUN apt-get install -y sudo \
+  && locale-gen \
+  && apt-get install -y sudo \
   && groupadd --gid ${USER_ID} ${USERNAME} \
   && useradd --uid ${USER_ID} --gid ${USER_ID} -m ${USERNAME} \
   && chsh --shell /bin/bash ${USERNAME} \
@@ -17,12 +17,14 @@ RUN apt-get install -y sudo \
 
 
 FROM minimal-with-user AS minimal-with-libs
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update --fix-missing \
+  && apt-get install -y --no-install-recommends \
   libgeotiff5
 
 
 FROM minimal-with-libs AS gcc-cmake-with_libs
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update --fix-missing \
+  && apt-get install -y --no-install-recommends \
   libtiff-dev libgeotiff-dev \
   cmake gcc g++ make
 
@@ -64,11 +66,11 @@ USER ${USERNAME}
 FROM minimal-with-libs AS py_gdal
 ARG USERNAME
 USER root
-RUN apt-get install -y --no-install-recommends \
-  cron curl nano procps psmisc tar util-linux unzip wget zip p7zip-full rsync \
-  time nano bc ministat sysstat screen
 # ensure that gdal can be imported at end
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update --fix-missing \
+  && apt-get install -y --no-install-recommends \
+  cron curl nano procps psmisc tar util-linux unzip wget zip p7zip-full rsync \
+  time nano bc ministat sysstat screen \
   python3 gdal-bin python3-gdal python3-setuptools python3-pip python3-venv \
   && update-alternatives --install /usr/bin/python python /usr/bin/python3 10 \
   && python -c "from osgeo import gdal"
@@ -102,7 +104,8 @@ RUN python -c "from osgeo import gdal" \
 FROM tbd_base AS tbd_gcc
 ARG USERNAME
 USER root
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update --fix-missing \
+  && apt-get install -y --no-install-recommends \
   libtiff-dev libgeotiff-dev \
   gdb valgrind libdwarf-dev libelf-dev libdw-dev linux-perf clang-format \
   cmake gcc g++ make
