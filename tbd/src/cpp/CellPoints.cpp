@@ -168,7 +168,12 @@ CellPoints& CellPoints::insert(
       || (spread_arrival_.ros() == spread_current.ros()
           && spread_current.intensity() > spread_arrival_.intensity()))
     {
-      spread_arrival_ = spread_current;
+      // NOTE: keep track of original time so this doesn't just always happen
+      spread_arrival_ = SpreadData(
+        spread_arrival_.time(),
+        spread_current.intensity(),
+        spread_current.ros(),
+        spread_current.direction());
     }
     // arrival_time_ = arrival_time;
   }
