@@ -812,14 +812,18 @@ CellPointsMap apply_offsets_spreadkey(
 #endif
       continue;
     }
-    auto& pts = cell_pts.pts_.second;
-    // never need input again so sorting doesn't hurt anythin
-    std::sort(pts.begin(), pts.end());
-    const auto it_pts_last = std::unique(pts.begin(), pts.end());
-    auto it_pts = pts.cbegin();
-    while (it_pts != it_pts_last)
+    auto& pts = cell_pts.pts_.points();
+    auto& dirs = cell_pts.pts_.directions();
+    // combine point and direction that lead to it so we can get unique values
+    auto pt_dirs = std::views::zip(pts, dirs);
+    std::sort(pt_dirs.begin(), pt_dirs.end());
+    const auto it_pt_dirs_last = std::unique(pt_dirs.begin(), pt_dirs.end());
+    auto it_pt_dirs = pt_dirs.cbegin();
+    while (it_pt_dirs != it_pt_dirs_last)
     {
-      const auto& p = *it_pts;
+      const auto& pt_dir = *it_pt_dirs;
+      const auto& pt = std::get<0>(pt_dir);
+      const auto& dir = std::get<1>(pt_dir);
       const auto& cell_x = cell_pts.cell_x_y_.first;
       const auto& cell_y = cell_pts.cell_x_y_.second;
       // FIX: HACK: recompose into XYPos
@@ -834,6 +838,7 @@ CellPointsMap apply_offsets_spreadkey(
         const auto& out = std::get<3>(r_p);
         const auto& x_o = out.first;
         const auto& y_o = out.second;
+        const auto dir_diff = abs(raz.asDegrees() - dir);
 #ifdef DEBUG_CELLPOINTS
         logging::note(
           "src.x %d; src.y %d;"
@@ -841,23 +846,28 @@ CellPointsMap apply_offsets_spreadkey(
           src.column(),
           src.row(),
           ros,
-          p.first,
-          p.second,
+          pt.first,
+          pt.second,
           duration);
 #endif
-        r1.insert(
-          src,
-          SpreadData(arrival_time,
-                     intensity,
-                     ros,
-                     raz),
-          x_o + p.first + cell_x,
-          y_o + p.second + cell_y);
+        // only spread in a direction that's in front of the normal to the angle it came from
+        // i.e. the 90 degrees on either side of the raz
+        if (90 >= dir_diff)
+        {
+          r1.insert(
+            src,
+            SpreadData(arrival_time,
+                       intensity,
+                       ros,
+                       raz),
+            x_o + pt.first + cell_x,
+            y_o + pt.second + cell_y);
 #ifdef DEBUG_CELLPOINTS
-        logging::note("r1 is now %ld items", r1.size());
+          logging::note("r1 is now %ld items", r1.size());
 #endif
+        }
       }
-      ++it_pts;
+      ++it_pt_dirs;
     }
   }
   return r1;

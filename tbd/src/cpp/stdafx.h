@@ -168,6 +168,7 @@ using PerimSize = uint8_t;
 using FuelSize = uint16_t;
 // using FuelSize = int16_t;
 using DirectionSize = uint16_t;
+constexpr auto INVALID_DIRECTION = std::numeric_limits<DirectionSize>::max();
 /**
  * \brief Type used for aspect values (uses [0 - 359])
  */
