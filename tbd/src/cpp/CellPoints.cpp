@@ -28,6 +28,7 @@ static const SpreadData INVALID_SPREAD_DATA{
   INVALID_TIME,
   static_cast<IntensitySize>(0),
   INVALID_ROS,
+  Direction::Invalid,
   Direction::Invalid};
 set<XYPos> CellPoints::unique() const noexcept
 {
@@ -156,28 +157,49 @@ CellPoints& CellPoints::insert(
     // record ros and time if nothing yet
     spread_arrival_ = spread_current;
   }
-  else if (abs(spread_current.time() - spread_arrival_.time()) <= TIME_EPSILON)
-  // else if (arrival_time == arrival_time_)
+  else
   {
-    logging::verbose(
-      "Same time so setting ros to max(%f, %f) at time %f",
-      spread_current.ros(),
-      spread_arrival_.ros(),
-      spread_current.time());
-    // the same time so pick higher ros
-    if (
-      (spread_arrival_.ros() < spread_current.ros())
-      || (spread_arrival_.ros() == spread_current.ros()
-          && spread_current.intensity() > spread_arrival_.intensity()))
+    // initial burn will have an invalid direction, so needs to burn everywhere
+    const auto is_initial = Direction::Invalid == spread_current.direction_previous();
+    // only spread in a direction that's in front of the normal to the angle it came from
+    // i.e. the 90 degrees on either side of the raz
+    const auto dir_diff = abs(spread_current.direction().asDegrees() - spread_current.direction_previous().asDegrees());
+    const auto MAX_DEGREES = 90.0;
+    // const auto MAX_DEGREES = 45.0;
+    // const auto MAX_DEGREES = 45.0;
+    // const auto MAX_DEGREES = (5.0 * MAX_SPREAD_ANGLE);
+    // FIX: this is causing reduced growth - think we need to consider if we're just initially in a cell and the raz is from the previous
+    // could also only update the spread direction if the angles are good, but spread regardless?
+    // const auto MAX_DEGREES = (2.0 * MAX_SPREAD_ANGLE);
+    // NOTE: there should be no change in the extent of the fire if we exclude things behind the normal to the direction it came from
+    //       - but if we exclude too much then it can change how things spread, even if it is a more representative angle for the grids
+    if (is_initial || MAX_DEGREES >= dir_diff)
     {
-      // NOTE: keep track of original time so this doesn't just always happen
-      spread_arrival_ = SpreadData(
-        spread_arrival_.time(),
-        spread_current.intensity(),
-        spread_current.ros(),
-        spread_current.direction());
+      if (abs(spread_current.time() - spread_arrival_.time()) <= TIME_EPSILON)
+      // else if (arrival_time == arrival_time_)
+      {
+        logging::verbose(
+          "Same time so setting ros to max(%f, %f) at time %f",
+          spread_current.ros(),
+          spread_arrival_.ros(),
+          spread_current.time());
+        // the same time so pick higher ros
+        if (
+          (spread_arrival_.ros() < spread_current.ros())
+          || (spread_arrival_.ros() == spread_current.ros()
+              && spread_current.intensity() > spread_arrival_.intensity()))
+        {
+          // NOTE: keep track of original time so this doesn't just always happen
+          spread_arrival_ = SpreadData(
+            spread_arrival_.time(),
+            spread_current.intensity(),
+            spread_current.ros(),
+            spread_current.direction(),
+            spread_current.direction_previous());
+        }
+        // arrival_time_ = arrival_time;
+      }
     }
-    // arrival_time_ = arrival_time;
   }
   // NOTE: use location inside cell so smaller types can be more precise
   // since digits aren't wasted on cell

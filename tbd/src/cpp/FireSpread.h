@@ -13,6 +13,7 @@
 namespace tbd::sim
 {
 
+static constexpr int MAX_SPREAD_ANGLE = 5.0;
 static constexpr MathSize INVALID_ROS = -1.0;
 static constexpr MathSize INVALID_INTENSITY = -1.0;
 
